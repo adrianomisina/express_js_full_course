@@ -1,7 +1,31 @@
 import express from 'express';
 
 const app = express();
+
 app.use(express.json());
+
+
+//Middleware Logs
+const logginMiddleware = (request, response, next) => {
+  console.log(`${request.nethod} - ${request.url}`)
+  next()
+}
+
+//Middleware ID by Users
+const resolveIndexByUserId = (request, response, next) => {
+  const {
+    params: { id },
+  } = request;
+
+  const parsedId = parseInt(id);
+  if (isNaN(parsedId)) return response.sendStatus(400);
+
+  const findUserIndex = mockUsers.findIndex(user => user.id === parsedId);
+
+  if (findUserIndex === -1) return response.sendStatus(404);
+  request.findUserIndex = findUserIndex;
+  next()
+}
 
 const PORT = process.env.PORT || 3000;
 
@@ -16,7 +40,21 @@ const mockUsers = [
 ];
 
 //GET
-app.get('/', (request, response) => {
+app.get(
+  '/', 
+  (request, response, next) => {
+   console.log("Base URL 1"); 
+   next()
+}, 
+  (request, response, next) => {
+   console.log("Base URL 2"); 
+   next()
+}, 
+  (request, response, next) => {
+   console.log("Base URL 3"); 
+   next()
+}, 
+  (request, response) => {
   response.status(201).send({ msg: 'Hello!' });
 });
 
@@ -36,6 +74,11 @@ app.get('/api/users', (request, response) => {
       mockUsers.filter(user => user[filter].includes(value)),
     );
 });
+
+app.use(logginMiddleware, (request, response, next) => {
+  console.log("Finished Logging...");
+  next();
+})
 
 //POST - Create a new user
 app.post('/api/users', (request, response) => {
@@ -71,19 +114,9 @@ app.get('/api/products', (request, response) => {
 });
 
 //PUT
-app.put('/api/users/:id', (request, response) => {
-  const {
-    body,
-    params: { id },
-  } = request;
-
-  const parsedId = parseInt(id);
-  if (isNaN(parsedId)) return response.sendStatus(400);
-
-  const findUserIndex = mockUsers.findIndex(user => user.id === parsedId);
-
-  if (findUserIndex === -1) return response.sendStatus(404);
-
+app.put('/api/users/:id', resolveIndexByUserId, (request, response) => {
+  const {body, findUserIndex} = request;
+  //substituido por resolveIndexByUserId
   mockUsers[findUserIndex] = {id: parsedId, ...body};
   return response.sendStatus(200)
 });
@@ -126,3 +159,5 @@ app.delete("/api/users/:id", (request, response) => {
   mockUsers.splice(findUserIndex, 1)
   return response.sendStatus(200);
 })
+
+// 1:41:02 - Middleware
